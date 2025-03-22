@@ -1,23 +1,25 @@
 const express = require("express");
 const http = require("http");
-const socketIo = require("socket.io");
+const { Server } = require("socket.io");
 const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
 
-// Enable CORS for API
+// ✅ Enable CORS for API requests
 app.use(cors({
-    origin: "*", // Allows all origins
+    origin: "*",
     methods: ["GET", "POST"]
 }));
 
 app.use(express.json());
 
-const io = socketIo(server, {
+const io = new Server(server, {
     cors: {
-        origin: "*", // Allows WebSocket connections from any origin
-        methods: ["GET", "POST"]
+        origin: "*", // ✅ Allow all origins
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type"], // ✅ Allow headers
+        credentials: true // ✅ Allow cookies (if needed)
     }
 });
 
