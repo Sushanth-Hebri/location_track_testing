@@ -3,44 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Driver GPS Tracker</title>
+    <title>Driver Tracking</title>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
-    <h2>Driver Location Tracker</h2>
-    <p>Status: <span id="status">Waiting...</span></p>
-    <p>Latitude: <span id="latitude">N/A</span></p>
-    <p>Longitude: <span id="longitude">N/A</span></p>
+    <h1>Driver Location Tracker</h1>
+    <button onclick="startTracking()">Start Tracking</button>
+    <p id="status">Status: Not tracking</p>
 
     <script>
-        const socket = io("https://location-track-testing.vercel.app"); // Update with your server URL
-        const DRIVER_ID = "driver_123"; // Unique hardcoded ID
+        const socket = io("https://location-track-testing.onrender.com", {
+            transports: ["polling"] // Using long polling
+        });
 
-        function sendLocation(position) {
-            const data = {
-                userId: DRIVER_ID,
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            };
+        const userId = "Sushanth laptop"; // Hardcoded driver ID (make it unique per driver)
 
-            document.getElementById("status").innerText = "Tracking...";
-            document.getElementById("latitude").innerText = data.lat;
-            document.getElementById("longitude").innerText = data.lng;
+        function startTracking() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        const data = {
+                            userId,
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
 
-            socket.emit("sendLocation", data);
-        }
-
-        function errorHandler(error) {
-            document.getElementById("status").innerText = "GPS Error!";
-            console.error("Error getting location:", error);
-        }
-
-        if ("geolocation" in navigator) {
-            setInterval(() => {
-                navigator.geolocation.getCurrentPosition(sendLocation, errorHandler);
-            }, 5000); // Send every 5 seconds
-        } else {
-            document.getElementById("status").innerText = "Geolocation not supported!";
+                        socket.emit("sendLocation", data);
+                        document.getElementById("status").innerText = `Status: Tracking (${data.lat}, ${data.lng})`;
+                    },
+                    (error) => {
+                        console.error("Geolocation error:", error);
+                        alert("Unable to fetch location!");
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                alert("Geolocation is not supported in this browser.");
+            }
         }
     </script>
 </body>

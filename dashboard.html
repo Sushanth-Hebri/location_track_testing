@@ -4,42 +4,118 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Owner Dashboard</title>
+    
+    <!-- Leaflet.js (OpenStreetMap) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Socket.io -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #map { height: 500px; width: 100%; margin-top: 10px; }
+        
+        /* Style for Driver Name Labels */
+        .driver-label {
+            background: black;
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+    </style>
 </head>
 <body>
-    <h2>Owner Dashboard - Driver Locations</h2>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Driver ID</th>
-                <th>Latitude</th>
-                <th>Longitude</th>
-            </tr>
-        </thead>
-        <tbody id="driverData">
-        </tbody>
-    </table>
+    <h1>Owner Dashboard</h1>
+    <p>Live Driver Locations:</p>
+    <ul id="driverList"></ul>
+
+    <!-- Map Container -->
+    <div id="map"></div>
 
     <script>
-        const socket = io("https://location-track-testing.vercel.app"); // Update with your server URL
-        const driverTable = document.getElementById("driverData");
-
-        socket.on("locationUpdate", (drivers) => {
-            driverTable.innerHTML = ""; // Clear previous data
-
-            for (const driverId in drivers) {
-                const driver = drivers[driverId];
-
-                let row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${driver.userId}</td>
-                    <td>${driver.lat}</td>
-                    <td>${driver.lng}</td>
-                `;
-
-                driverTable.appendChild(row);
-            }
+        const socket = io("https://location-track-testing.onrender.com", {
+            transports: ["polling"]
         });
+
+        let map = L.map('map').setView([20.5937, 78.9629], 5); // Center on India
+
+        // Load OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let driverMarkers = {}; // Stores driver markers
+        let driverLabels = {}; // Stores driver name labels
+        let firstUpdate = true; // Flag to track first update
+
+        // 🚗 Custom Car Icon
+        const carIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/3200/3200482.png',  // Car icon URL
+            iconSize: [35, 35],  // Width, Height
+            iconAnchor: [17, 17]  // Center the icon
+        });
+
+        function fetchDriverLocations() {
+            fetch("https://location-track-testing.onrender.com/dashboard/drivers/all")
+                .then(response => response.json())
+                .then(data => updateDriverListAndMap(data))
+                .catch(error => console.error("Error fetching driver locations:", error));
+        }
+
+        function updateDriverListAndMap(drivers) {
+            const driverList = document.getElementById("driverList");
+            driverList.innerHTML = ""; // Clear list
+
+            let bounds = new L.LatLngBounds(); // To auto-fit map to drivers
+
+            drivers.forEach(driver => {
+                // Add to list
+                const listItem = document.createElement("li");
+                listItem.innerText = `Driver ${driver.userId}: Lat ${driver.lat}, Lng ${driver.lng}`;
+                driverList.appendChild(listItem);
+
+                // Update Map Markers & Labels
+                let latLng = [driver.lat, driver.lng];
+                bounds.extend(latLng);
+
+                if (driverMarkers[driver.userId]) {
+                    // Update existing marker
+                    driverMarkers[driver.userId].setLatLng(latLng);
+                    driverLabels[driver.userId].setLatLng(latLng);
+                } else {
+                    // Create new marker with car icon
+                    driverMarkers[driver.userId] = L.marker(latLng, { icon: carIcon }).addTo(map);
+
+                    // Create a label with driver name
+                    driverLabels[driver.userId] = L.marker(latLng, {
+                        icon: L.divIcon({
+                            className: 'driver-label',
+                            html: `<b>${driver.userId}</b>`,
+                            iconSize: [50, 20], // Width, Height
+                            iconAnchor: [25, -10] // Offset to appear above marker
+                        })
+                    }).addTo(map);
+                }
+            });
+
+            // Auto-zoom only on first update
+            if (drivers.length > 0 && firstUpdate) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+                firstUpdate = false; // Prevent auto-zoom after first load
+            }
+        }
+
+        // Fetch driver data every 5 seconds
+        setInterval(fetchDriverLocations, 5000);
+
+        // Listen for real-time updates
+        socket.on("locationUpdate", (drivers) => {
+            updateDriverListAndMap(drivers);
+        });
+
     </script>
 </body>
 </html>

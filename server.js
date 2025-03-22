@@ -36,7 +36,7 @@ io.on("connection", (socket) => {
     console.log("A driver connected:", socket.id);
 
     socket.on("sendLocation", (data) => {
-        console.log(`📍 Location update from ${data.userId}:`, data);
+        // console.log(`📍 Location update from ${data.userId}:`, data);
         drivers[data.userId] = { 
             userId: data.userId, 
             lat: data.lat, 
@@ -48,7 +48,7 @@ io.on("connection", (socket) => {
 
     // 📌 Handle Disconnection
     socket.on("disconnect", () => {
-        console.log("❌ Driver disconnected:", socket.id);
+        // console.log("❌ Driver disconnected:", socket.id);
         for (let userId in drivers) {
             if (drivers[userId].socketId === socket.id) {
                 delete drivers[userId];
