@@ -8,7 +8,11 @@
 </head>
 <body>
     <h1>Driver Location Tracker</h1>
+
+    <label for="userId">Enter Your ID:</label>
+    <input type="text" id="userId" placeholder="e.g., driver123">
     <button onclick="startTracking()">Start Tracking</button>
+
     <p id="status">Status: Not tracking</p>
 
     <script>
@@ -16,9 +20,14 @@
             transports: ["polling"] // Using long polling
         });
 
-        const userId = "driver123"; // Hardcoded driver ID (make it unique per driver)
-
         function startTracking() {
+            const userId = document.getElementById("userId").value.trim();
+
+            if (!userId) {
+                alert("Please enter your User ID!");
+                return;
+            }
+
             if ("geolocation" in navigator) {
                 navigator.geolocation.watchPosition(
                     (position) => {
