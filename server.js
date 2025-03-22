@@ -16,11 +16,12 @@ app.use(express.json());
 
 const io = new Server(server, {
     cors: {
-        origin: "*", // ✅ Allow all origins
+        origin: "*",
         methods: ["GET", "POST"],
-        allowedHeaders: ["Content-Type"], // ✅ Allow headers
-        credentials: true // ✅ Allow cookies (if needed)
-    }
+        allowedHeaders: ["Content-Type"],
+        credentials: true
+    },
+    transports: ["polling"] // ✅ Only use polling (no WebSocket)
 });
 
 let drivers = {}; // Stores driver locations
@@ -40,7 +41,7 @@ io.on("connection", (socket) => {
             userId: data.userId, 
             lat: data.lat, 
             lng: data.lng,
-            socketId: socket.id // Store socket ID for proper removal
+            socketId: socket.id
         };
         io.emit("locationUpdate", Object.values(drivers)); // Broadcast updates
     });
