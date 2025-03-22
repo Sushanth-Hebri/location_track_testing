@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dashboard - Live Tracking</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        #drivers { padding: 10px; border: 1px solid #ccc; display: inline-block; text-align: left; margin-top: 20px; }
+        .driver { padding: 8px; border-bottom: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+    <h2>Owner Dashboard - Live Driver Tracking</h2>
+    <div id="drivers">
+        <h3>Active Drivers</h3>
+        <div id="driver-list">No drivers yet...</div>
+    </div>
+
+    <script>
+        const socket = io("http://localhost:5000");
+        const driverList = document.getElementById("driver-list");
+        let drivers = {};
+
+        function updateUI() {
+            driverList.innerHTML = "";
+            for (let userId in drivers) {
+                let driver = drivers[userId];
+                driverList.innerHTML += `<div class="driver">
+                    <strong>${userId}:</strong> Lat: ${driver.lat.toFixed(6)}, Lng: ${driver.lng.toFixed(6)}
+                </div>`;
+            }
+        }
+
+        // Fetch initial driver locations
+        fetch("http://localhost:5000/dashboard/drivers/all")
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(driver => {
+                    drivers[driver.userId] = { lat: driver.lat, lng: driver.lng };
+                });
+                updateUI();
+            })
+            .catch(error => console.error("Error fetching drivers:", error));
+
+        // Listen for real-time location updates
+        socket.on("locationUpdate", (data) => {
+            drivers = data;
+            updateUI();
+        });
+
+    </script>
+
+</body>
+</html>
