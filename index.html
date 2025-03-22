@@ -1,104 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Real-Time Location Tracker</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v7.4.0/ol.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background-color: #f4f4f9;
-    }
-
-    h1 {
-      color: #333;
-    }
-
-    #map {
-      height: 400px;
-      width: 80%;
-      max-width: 800px;
-      border: 2px solid #007bff;
-      border-radius: 10px;
-    }
-
-    #location {
-      margin-top: 20px;
-      font-size: 18px;
-      color: #555;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Tracking</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
-  <h1>Real-Time Location Tracker</h1>
-  <div id="map"></div>
-  <div id="location">Fetching your location...</div>
+    <h1>Driver Location Tracker</h1>
+    <button onclick="startTracking()">Start Tracking</button>
+    <p id="status">Status: Not tracking</p>
 
-  <script src="https://cdn.jsdelivr.net/npm/ol@v7.4.0/dist/ol.js"></script>
-  <script>
-    const defaultLocation = [77.2090, 28.6139]; // New Delhi as fallback
+    <script>
+        const socket = io("https://location-track-testing.onrender.com", {
+            transports: ["polling"] // Using long polling
+        });
 
-    // Initialize the map
-    const view = new ol.View({
-      center: ol.proj.fromLonLat(defaultLocation),
-      zoom: 15,
-    });
+        const userId = "driver123"; // Hardcoded driver ID (make it unique per driver)
 
-    const map = new ol.Map({
-      target: 'map',
-      layers: [
-        new ol.layer.Tile({
-          source: new ol.source.OSM(),
-        }),
-      ],
-      view: view,
-    });
+        function startTracking() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        const data = {
+                            userId,
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
 
-    // Marker for user location
-    const marker = new ol.Feature();
-    const markerStyle = new ol.style.Style({
-      image: new ol.style.Circle({
-        radius: 8,
-        fill: new ol.style.Fill({ color: '#007bff' }),
-        stroke: new ol.style.Stroke({ color: '#fff', width: 2 }),
-      }),
-    });
-    marker.setStyle(markerStyle);
-
-    const vectorSource = new ol.source.Vector({ features: [marker] });
-    const vectorLayer = new ol.layer.Vector({ source: vectorSource });
-    map.addLayer(vectorLayer);
-
-    // Track real-time location
-    const geolocation = new ol.Geolocation({
-      trackingOptions: { enableHighAccuracy: true },
-      projection: view.getProjection(),
-    });
-
-    geolocation.on('error', (error) => {
-      console.error('Geolocation error:', error.message);
-      document.getElementById('location').innerText = 'Error getting location';
-    });
-
-    geolocation.on('change:position', () => {
-      const coordinates = geolocation.getPosition();
-      if (coordinates) {
-        marker.setGeometry(new ol.geom.Point(coordinates));
-        view.setCenter(coordinates);
-        document.getElementById('location').innerText =
-          `Latitude: ${ol.proj.toLonLat(coordinates)[1].toFixed(4)}, Longitude: ${ol.proj.toLonLat(coordinates)[0].toFixed(4)}`;
-      }
-    });
-
-    geolocation.setTracking(true);
-  </script>
+                        socket.emit("sendLocation", data);
+                        document.getElementById("status").innerText = `Status: Tracking (${data.lat}, ${data.lng})`;
+                    },
+                    (error) => {
+                        console.error("Geolocation error:", error);
+                        alert("Unable to fetch location!");
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                alert("Geolocation is not supported in this browser.");
+            }
+        }
+    </script>
 </body>
 </html>
