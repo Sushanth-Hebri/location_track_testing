@@ -3,55 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Owner Dashboard - Live Tracking</title>
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
-    <style>
-        body { text-align: center; font-family: Arial, sans-serif; }
-        #drivers { padding: 10px; border: 1px solid #ccc; display: inline-block; text-align: left; margin-top: 20px; }
-        .driver { padding: 8px; border-bottom: 1px solid #ddd; }
-    </style>
+    <title>Owner Dashboard</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 </head>
 <body>
-
-    <h2>Owner Dashboard - Live Driver Tracking</h2>
-    <div id="drivers">
-        <h3>Active Drivers</h3>
-        <div id="driver-list">No drivers yet...</div>
-    </div>
+    <h2>Owner Dashboard - Driver Locations</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Driver ID</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+            </tr>
+        </thead>
+        <tbody id="driverData">
+        </tbody>
+    </table>
 
     <script>
-        const socket = io("http://localhost:5000");
-        const driverList = document.getElementById("driver-list");
-        let drivers = {};
+        const socket = io("https://location-track-testing.vercel.app"); // Update with your server URL
+        const driverTable = document.getElementById("driverData");
 
-        function updateUI() {
-            driverList.innerHTML = "";
-            for (let userId in drivers) {
-                let driver = drivers[userId];
-                driverList.innerHTML += `<div class="driver">
-                    <strong>${userId}:</strong> Lat: ${driver.lat.toFixed(6)}, Lng: ${driver.lng.toFixed(6)}
-                </div>`;
+        socket.on("locationUpdate", (drivers) => {
+            driverTable.innerHTML = ""; // Clear previous data
+
+            for (const driverId in drivers) {
+                const driver = drivers[driverId];
+
+                let row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${driver.userId}</td>
+                    <td>${driver.lat}</td>
+                    <td>${driver.lng}</td>
+                `;
+
+                driverTable.appendChild(row);
             }
-        }
-
-        // Fetch initial driver locations
-        fetch("http://localhost:5000/dashboard/drivers/all")
-            .then(response => response.json())
-            .then(data => {
-                data.forEach(driver => {
-                    drivers[driver.userId] = { lat: driver.lat, lng: driver.lng };
-                });
-                updateUI();
-            })
-            .catch(error => console.error("Error fetching drivers:", error));
-
-        // Listen for real-time location updates
-        socket.on("locationUpdate", (data) => {
-            drivers = data;
-            updateUI();
         });
-
     </script>
-
 </body>
 </html>

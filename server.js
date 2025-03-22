@@ -5,45 +5,59 @@ const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
+
+// Enable CORS for API
+app.use(cors({
+    origin: "*", // Allows all origins
+    methods: ["GET", "POST"]
+}));
+
+app.use(express.json());
+
 const io = socketIo(server, {
     cors: {
-        origin: "*",
+        origin: "*", // Allows WebSocket connections from any origin
         methods: ["GET", "POST"]
     }
 });
 
-app.use(cors());
-app.use(express.json());
-
 let drivers = {}; // Stores driver locations
 
-// REST API to get all active drivers
+// 📌 API Endpoint: Get all active driver locations
 app.get("/dashboard/drivers/all", (req, res) => {
     res.json(Object.values(drivers));
 });
 
-// Handle WebSocket connections
+// 📌 WebSocket Connection Handling
 io.on("connection", (socket) => {
     console.log("A driver connected:", socket.id);
 
     socket.on("sendLocation", (data) => {
-        console.log(`Received location from ${data.userId}:`, data);
-        drivers[data.userId] = { userId: data.userId, lat: data.lat, lng: data.lng };
-        io.emit("locationUpdate", drivers); // Broadcast updated locations
+        console.log(`📍 Location update from ${data.userId}:`, data);
+        drivers[data.userId] = { 
+            userId: data.userId, 
+            lat: data.lat, 
+            lng: data.lng,
+            socketId: socket.id // Store socket ID for proper removal
+        };
+        io.emit("locationUpdate", Object.values(drivers)); // Broadcast updates
     });
 
+    // 📌 Handle Disconnection
     socket.on("disconnect", () => {
-        console.log("Driver disconnected:", socket.id);
+        console.log("❌ Driver disconnected:", socket.id);
         for (let userId in drivers) {
             if (drivers[userId].socketId === socket.id) {
                 delete drivers[userId];
-                io.emit("locationUpdate", drivers);
+                io.emit("locationUpdate", Object.values(drivers));
                 break;
             }
         }
     });
 });
 
-server.listen(5000, () => {
-    console.log("🚀 Server running on http://localhost:5000");
+// 🌍 Start the Server
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
